@@ -1,0 +1,288 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>全家福优化器</title>
+  <style>
+    :root {
+      --bg: #f4f6f8;
+      --surface: #ffffff;
+      --line: #d9dee5;
+      --text: #1d2733;
+      --muted: #647180;
+      --green: #19764a;
+      --green-soft: #e6f3eb;
+      --blue: #1769aa;
+      --amber: #956100;
+      --red: #b42318;
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; margin: 0; }
+    body {
+      font-family: "Segoe UI", "Microsoft YaHei", Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      font-size: 14px;
+      letter-spacing: 0;
+      overflow: hidden;
+    }
+    button, input { font: inherit; letter-spacing: 0; }
+    .app { height: 100%; display: grid; grid-template-rows: auto auto auto 1fr; }
+    header {
+      position: relative;
+      height: 58px;
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      padding: 0 22px;
+      background: #202a35;
+      color: #fff;
+      border-bottom: 1px solid #151c24;
+    }
+    header .run-state { position: static; margin-left: 24px; }
+    h1 { margin: 0; font-size: 20px; font-weight: 650; }
+    .run-state { display: flex; align-items: center; gap: 8px; color: #dfe6ed; font-size: 13px; }
+    .dot { width: 9px; height: 9px; border-radius: 50%; background: #98a3ad; }
+    .dot.running { background: #53c98b; box-shadow: 0 0 0 3px rgba(83,201,139,.18); }
+    .dot.completed { background: #53c98b; }
+    .dot.failed { background: #f97066; }
+    .controls {
+      display: block;
+      padding: 14px 20px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--line);
+    }
+    .field { width: 100%; min-width: 280px; }
+    .field label { display: block; margin: 0 0 6px; color: var(--muted); font-size: 12px; }
+    .path-row { display: flex; gap: 8px; }
+    .path-row input { flex: 1 1 0; width: 0; min-width: 0; }
+    .control-actions {
+      display: flex; align-items: center; justify-content: flex-start; gap: 10px; margin-top: 10px;
+    }
+    input[type="text"] {
+      width: 100%; height: 36px; padding: 0 10px;
+      border: 1px solid #bfc7d1; border-radius: 4px; color: var(--text); background: #fff;
+      outline: none;
+    }
+    .path-row input[type="text"] { flex: 1 1 0; width: 0; min-width: 0; }
+    input[type="text"]:focus { border-color: var(--blue); box-shadow: 0 0 0 2px rgba(23,105,170,.12); }
+    button {
+      height: 36px; padding: 0 14px; border: 1px solid #b9c2cc; border-radius: 4px;
+      color: #263442; background: #fff; cursor: pointer; white-space: nowrap;
+    }
+    button:hover:not(:disabled) { background: #f1f4f6; border-color: #929eaa; }
+    button:disabled { opacity: .48; cursor: default; }
+    button.primary { background: var(--green); border-color: var(--green); color: #fff; font-weight: 600; min-width: 94px; }
+    button.primary:hover:not(:disabled) { background: #125f3b; border-color: #125f3b; }
+    .check { height: 36px; display: flex; align-items: center; gap: 7px; white-space: nowrap; color: #344353; }
+    .check input { width: 16px; height: 16px; accent-color: var(--green); }
+    .summary {
+      min-height: 44px; display: flex; align-items: center; gap: 22px; padding: 7px 20px;
+      background: #eef2f5; border-bottom: 1px solid var(--line); color: var(--muted); font-size: 13px;
+    }
+    .summary b { color: var(--text); font-weight: 650; }
+    .spacer { display: none; }
+    .workspace { min-height: 0; display: grid; grid-template-rows: 40px 1fr; padding: 0 20px 18px; }
+    .tabs { display: flex; align-items: end; gap: 2px; border-bottom: 1px solid var(--line); }
+    .tab {
+      height: 39px; padding: 0 16px; border: 0; border-radius: 0; background: transparent;
+      color: var(--muted); border-bottom: 2px solid transparent;
+    }
+    .tab:hover { background: transparent !important; color: var(--text); }
+    .tab.active { color: var(--green); border-bottom-color: var(--green); font-weight: 600; }
+    .panel { min-height: 0; background: var(--surface); border: 1px solid var(--line); border-top: 0; }
+    #logPanel { overflow: auto; padding: 10px 0; }
+    .log-line {
+      min-height: 25px; padding: 4px 12px; border-left: 3px solid transparent;
+      font-family: Consolas, "Microsoft YaHei UI", monospace; font-size: 12px; line-height: 17px;
+      white-space: pre-wrap; overflow-wrap: anywhere; color: #3d4b59;
+    }
+    .log-line:nth-child(even) { background: #fafbfc; }
+    .log-line.rank { border-left-color: var(--blue); color: #174f79; }
+    .log-line.success { border-left-color: var(--green); color: #145c3a; background: #f4faf6; }
+    .log-line.warning { border-left-color: var(--amber); color: #704a05; background: #fffaf0; }
+    .log-line.error { border-left-color: var(--red); color: #8f1e16; background: #fff5f4; }
+    .empty { height: 100%; display: grid; place-items: center; color: #8793a0; }
+    #reportPanel { display: none; }
+    #reportFrame { width: 100%; height: 100%; border: 0; background: #fff; }
+    .progress { width: 120px; height: 5px; background: #d7dde3; overflow: hidden; }
+    .progress > span { display: block; width: 0; height: 100%; background: var(--green); transition: width .25s ease; }
+    @media (max-width: 1040px) {
+      .control-actions { justify-content: flex-start; flex-wrap: wrap; }
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>全家福优化器</h1>
+    <div class="run-state"><span id="stateDot" class="dot"></span><span id="stateText">就绪</span></div>
+  </header>
+
+  <section class="controls">
+    <div class="field">
+      <label for="inputDir">图片文件夹</label>
+      <div class="path-row">
+        <input id="inputDir" type="text" spellcheck="false">
+        <button id="browseBtn">浏览</button>
+      </div>
+    </div>
+    <div class="control-actions">
+      <label class="check"><input id="reuseCheck" type="checkbox">复用分析缓存</label>
+      <label class="check"><input id="analyzeCheck" type="checkbox">仅分析</label>
+      <button id="configBtn">配置</button>
+      <button id="startBtn" class="primary">开始处理</button>
+    </div>
+  </section>
+
+  <section class="summary">
+    <span>阶段 <b id="phaseText">等待</b></span>
+    <span>检测 <b id="detectText">0 / 0</b></span>
+    <span>母片 <b id="baseText">-</b></span>
+    <span>替换 <b id="replaceText">-</b></span>
+    <span>耗时 <b id="elapsedText">0.0 s</b></span>
+    <div class="progress"><span id="progressBar"></span></div>
+    <span class="spacer"></span>
+    <button id="finalBtn" disabled>打开成片</button>
+    <button id="outputBtn" disabled>打开输出目录</button>
+  </section>
+
+  <main class="workspace">
+    <nav class="tabs">
+      <button class="tab active" data-panel="logPanel">实时日志</button>
+      <button class="tab" data-panel="reportPanel" id="reportTab" disabled>审核报告</button>
+    </nav>
+    <section id="logPanel" class="panel"><div id="emptyLog" class="empty">等待运行</div></section>
+    <section id="reportPanel" class="panel"><iframe id="reportFrame" title="审核报告"></iframe></section>
+  </main>
+</div>
+
+<script>
+  const $ = id => document.getElementById(id);
+  let logIndex = 0;
+  let startedAt = null;
+  let pollTimer = null;
+  let imageCount = 0;
+  const phaseNames = {
+    ready: '等待', starting: '准备', detecting: '人脸分析', aligning: '照片配准',
+    ranking: '质量排序', replacing: '局部替换', writing: '写入输出',
+    completed: '完成', failed: '失败'
+  };
+
+  function setState(state) {
+    const labels = {idle: '就绪', running: '处理中', completed: '已完成', failed: '失败'};
+    $('stateText').textContent = labels[state] || state;
+    $('stateDot').className = 'dot ' + state;
+    const running = state === 'running';
+    $('startBtn').disabled = running;
+    $('browseBtn').disabled = running;
+    $('inputDir').disabled = running;
+    $('reuseCheck').disabled = running;
+    $('analyzeCheck').disabled = running;
+  }
+
+  function lineClass(line) {
+    if (line.includes('ERROR') || line.includes('RUN failed')) return 'error';
+    if (line.includes('NO_REPLACEMENT') || line.includes('WARNING')) return 'warning';
+    if (line.includes('REPLACED track=') || line.includes('RUN completed')) return 'success';
+    if (line.includes('QUALITY_RANK rank=')) return 'rank';
+    return '';
+  }
+
+  function appendLines(lines) {
+    if (!lines.length) return;
+    const empty = $('emptyLog');
+    if (empty) empty.remove();
+    const fragment = document.createDocumentFragment();
+    for (const line of lines) {
+      const row = document.createElement('div');
+      row.className = 'log-line ' + lineClass(line);
+      row.textContent = line;
+      fragment.appendChild(row);
+    }
+    $('logPanel').appendChild(fragment);
+    $('logPanel').scrollTop = $('logPanel').scrollHeight;
+  }
+
+  function selectTab(panelId) {
+    document.querySelectorAll('.tab').forEach(tab => tab.classList.toggle('active', tab.dataset.panel === panelId));
+    $('logPanel').style.display = panelId === 'logPanel' ? 'block' : 'none';
+    $('reportPanel').style.display = panelId === 'reportPanel' ? 'block' : 'none';
+  }
+
+  async function poll() {
+    const status = await window.pywebview.api.get_status(logIndex);
+    appendLines(status.lines || []);
+    logIndex = status.next || logIndex;
+    setState(status.state);
+    $('phaseText').textContent = phaseNames[status.phase] || status.phase;
+    imageCount = status.image_count || imageCount;
+    $('detectText').textContent = `${status.detection_done || 0} / ${imageCount || '?'}`;
+    if (imageCount > 0) $('progressBar').style.width = `${Math.min(100, (status.detection_done || 0) / imageCount * 100)}%`;
+    if (startedAt && status.state === 'running') {
+      $('elapsedText').textContent = `${((Date.now() - startedAt) / 1000).toFixed(1)} s`;
+    }
+    if (status.result) {
+      const result = status.result;
+      $('baseText').textContent = result.base_image;
+      $('replaceText').textContent = `${result.replaced_count} 成功 / ${result.skipped_count} 跳过`;
+      $('elapsedText').textContent = `${result.total_seconds.toFixed(2)} s`;
+      $('finalBtn').disabled = false;
+      $('outputBtn').disabled = false;
+      $('reportTab').disabled = false;
+      if (!$('reportFrame').src) {
+        $('reportFrame').src = result.report_url + '?v=' + Date.now();
+        selectTab('reportPanel');
+      }
+    }
+    if (status.state === 'failed') {
+      $('phaseText').textContent = status.error || '失败';
+    }
+    if (status.state === 'running') pollTimer = setTimeout(poll, 500);
+  }
+
+  window.addEventListener('pywebviewready', async () => {
+    const initial = await window.pywebview.api.initial_state();
+    $('inputDir').value = initial.input_dir;
+    setState('idle');
+  });
+
+  $('browseBtn').addEventListener('click', async () => {
+    const selected = await window.pywebview.api.select_folder();
+    if (selected) $('inputDir').value = selected;
+  });
+
+  $('startBtn').addEventListener('click', async () => {
+    const input = $('inputDir').value.trim();
+    const response = await window.pywebview.api.start_processing(input, $('reuseCheck').checked, $('analyzeCheck').checked);
+    if (!response.ok) {
+      $('phaseText').textContent = response.error;
+      return;
+    }
+    logIndex = 0;
+    startedAt = Date.now();
+    imageCount = 0;
+    $('logPanel').innerHTML = '<div id="emptyLog" class="empty">正在启动</div>';
+    $('reportFrame').removeAttribute('src');
+    $('reportTab').disabled = true;
+    $('finalBtn').disabled = true;
+    $('outputBtn').disabled = true;
+    $('baseText').textContent = '-';
+    $('replaceText').textContent = '-';
+    $('progressBar').style.width = '0';
+    selectTab('logPanel');
+    setState('running');
+    if (pollTimer) clearTimeout(pollTimer);
+    poll();
+  });
+
+  document.querySelectorAll('.tab').forEach(tab => tab.addEventListener('click', () => {
+    if (!tab.disabled) selectTab(tab.dataset.panel);
+  }));
+  $('configBtn').addEventListener('click', () => window.pywebview.api.open_config());
+  $('finalBtn').addEventListener('click', () => window.pywebview.api.open_final());
+  $('outputBtn').addEventListener('click', () => window.pywebview.api.open_output());
+</script>
+</body>
+</html>

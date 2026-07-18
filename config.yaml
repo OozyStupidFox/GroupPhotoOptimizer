@@ -1,0 +1,48 @@
+input_dir: images
+output_dir: output
+models_dir: models
+
+detection:
+  tile_size: 1600
+  tile_overlap: 0.30
+  score_threshold: 0.72
+  nms_threshold: 0.30
+  min_face_size: 24
+  crop_margin: 0.55
+
+alignment:
+  work_width: 1800
+  min_matches: 35
+  ransac_threshold: 3.0
+
+tracking:
+  # SFace cosine similarity. A strict identity check is important for relatives.
+  match_similarity: 0.42
+  replacement_similarity: 0.52
+  max_position_in_face_widths: 1.15
+  min_observations_for_new_track: 3
+
+scoring:
+  min_detection_score: 0.74
+  min_sharpness: 55.0
+  blink_threshold: 0.52
+  eye_asymmetry_threshold: 0.42
+  mouth_abnormal_threshold: 0.58
+  expression_deviation_threshold: 3.5
+
+replacement:
+  min_outside_similarity: 0.64
+  min_quality_ratio: 0.82
+  min_expression_improvement: 0.12
+  max_donor_blink: 0.48
+  max_donor_mouth_abnormal: 0.50
+  feather_ratio: 0.055
+  max_replacements: 100
+  replace_mouth: true
+
+manual:
+  # Set to a file name such as DSCF1254.JPG to override automatic base selection.
+  base_image: null
+  exclude_tracks: []
+  # Example: {"P023": {"eyes": "DSCF1254.JPG", "mouth": "DSCF1256.JPG"}}
+  force_donors: {}
