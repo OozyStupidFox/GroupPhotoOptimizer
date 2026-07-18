@@ -4,6 +4,10 @@
 
 复制此代码克隆此项目工程：git clone https://github.com/OozyStupidFox/GroupPhotoOptimizer.git
 
+```powershell
+git clone https://github.com/OozyStupidFox/GroupPhotoOptimizer.git
+```
+
 这个工程面向机位基本不变、人物站位相同的一组连拍照片。它会在本机完成以下工作：
 
 1. 对 6240×4160 等高分辨率照片分块检测人脸，并计算清晰度和严格的人脸特征。
