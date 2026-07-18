@@ -2,7 +2,7 @@
 
 下载前确保电脑已安装Git LFS。Git LFS下载链接：https://git-lfs.com/
 
-复制此代码克隆此项目工程：git clone https://github.com/OozyStupidFox/GroupPhotoOptimizer.git
+复制此代码克隆此项目工程：
 
 ```powershell
 git clone https://github.com/OozyStupidFox/GroupPhotoOptimizer.git
